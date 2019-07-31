@@ -44,9 +44,10 @@
     <url>https://github.com/jenkinsci/jenkins-${project.artifactId}-plugin</url>
 
     <properties>
-        <jenkins.version>2.86</jenkins.version>
-        <scm-api.version>2.2.6</scm-api.version>
+        <jenkins.version>2.107.3</jenkins.version>
+        <scm-api.version>2.6.3</scm-api.version>
         <git-plugin.version>3.6.0</git-plugin.version>
+        <svn-plugin.version>2.12.2</svn-plugin.version>
         <java.level>8</java.level>
     </properties>
 
@@ -116,6 +117,11 @@
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>git</artifactId>
             <version>${git-plugin.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>subversion</artifactId>
+            <version>${svn-plugin.version}</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
