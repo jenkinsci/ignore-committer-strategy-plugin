@@ -44,7 +44,7 @@
     <url>https://github.com/jenkinsci/jenkins-${project.artifactId}-plugin</url>
 
     <properties>
-        <jenkins.version>2.86</jenkins.version>
+        <jenkins.version>2.164.3</jenkins.version>
         <scm-api.version>2.2.6</scm-api.version>
         <git-plugin.version>3.6.0</git-plugin.version>
         <java.level>8</java.level>
@@ -110,7 +110,7 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>github-api</artifactId>
-            <version>1.90</version>
+            <version>1.114.2</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
