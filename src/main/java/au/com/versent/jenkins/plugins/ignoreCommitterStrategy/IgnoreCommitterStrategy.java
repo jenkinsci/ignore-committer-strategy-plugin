@@ -24,31 +24,30 @@
 package au.com.versent.jenkins.plugins.ignoreCommitterStrategy;
 
 
-import edu.umd.cs.findbugs.annotations.CheckForNull;
-import hudson.Extension;
-import hudson.model.Job;
-import hudson.scm.SCM;
-import jenkins.model.Jenkins;
-import jenkins.plugins.git.AbstractGitSCMSource;
-import jenkins.scm.api.*;
-import org.kohsuke.stapler.DataBoundConstructor;
-import jenkins.branch.BranchBuildStrategy;
-import jenkins.branch.BranchBuildStrategyDescriptor;
-
-import java.util.List;
-import java.util.logging.Logger;
-
-import jenkins.plugins.git.GitSCMFileSystem;
-
-import java.io.ByteArrayOutputStream;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.util.Arrays;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
+import org.kohsuke.stapler.DataBoundConstructor;
+
+import hudson.Extension;
+import hudson.model.TaskListener;
 import hudson.plugins.git.GitChangeLogParser;
 import hudson.plugins.git.GitChangeSet;
-import java.util.logging.Level;
-
-import java.util.Arrays;
-import java.util.stream.Collectors;
+import hudson.scm.SCM;
+import jenkins.branch.BranchBuildStrategy;
+import jenkins.branch.BranchBuildStrategyDescriptor;
+import jenkins.plugins.git.AbstractGitSCMSource;
+import jenkins.plugins.git.GitSCMFileSystem;
+import jenkins.scm.api.SCMFileSystem;
+import jenkins.scm.api.SCMHead;
+import jenkins.scm.api.SCMRevision;
+import jenkins.scm.api.SCMSource;
+import jenkins.scm.api.SCMSourceOwner;
 
 public class IgnoreCommitterStrategy extends BranchBuildStrategy {
     private static final Logger LOGGER = Logger.getLogger(IgnoreCommitterStrategy.class.getName());
@@ -85,7 +84,7 @@ public class IgnoreCommitterStrategy extends BranchBuildStrategy {
      * @return true if changeset does not have commits by ignored users or at least one user is not excluded and {allowBuildIfNotExcludedAuthor} is true
      */
     @Override
-    public boolean isAutomaticBuild(SCMSource source, SCMHead head, SCMRevision currRevision, SCMRevision prevRevision) {
+    public boolean isAutomaticBuild(SCMSource source, SCMHead head, SCMRevision currRevision, SCMRevision prevRevision, SCMRevision lastSeenRevision, TaskListener listener) {
         GitSCMFileSystem.Builder builder = new GitSCMFileSystem.BuilderImpl();
 
         try {
@@ -123,7 +122,7 @@ public class IgnoreCommitterStrategy extends BranchBuildStrategy {
             List<String> ignoredAuthorsList = Arrays.stream(
                     ignoredAuthors.split(",")).map(e -> e.trim().toLowerCase()).collect(Collectors.toList());
 
-            LOGGER.info(String.format("Ignored authors: %s", ignoredAuthorsList.toString()));
+            LOGGER.log(Level.FINE, String.format("Ignored authors: %s", ignoredAuthorsList.toString()));
 
             for (GitChangeSet log : logs) {
                 String authorEmail = log.getAuthorEmail().trim().toLowerCase();
@@ -150,7 +149,7 @@ public class IgnoreCommitterStrategy extends BranchBuildStrategy {
             }
             // here if commits are made by ignored authors and allowBuildIfNotExcludedAuthor is true, in this case return false
             // or if all commits are made by non-ignored authors and allowBuildIfNotExcludedAuthor is false, in this case return true
-            LOGGER.info(String.format("All commits in the changeset are made by %s excluded authors, build is %s",
+            LOGGER.log(Level.FINE, String.format("All commits in the changeset are made by %s excluded authors, build is %s",
                     allowBuildIfNotExcludedAuthor ? "" : "Non", !allowBuildIfNotExcludedAuthor ));
 
             return !allowBuildIfNotExcludedAuthor;
@@ -167,5 +166,6 @@ public class IgnoreCommitterStrategy extends BranchBuildStrategy {
             return "Ignore Committer Strategy";
         }
     }
+
 
 }
