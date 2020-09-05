@@ -24,51 +24,32 @@
 package au.com.versent.jenkins.plugins.ignoreCommitterStrategy;
 
 
-import edu.umd.cs.findbugs.annotations.NonNull;
-import hudson.model.Item;
-import hudson.model.ItemGroup;
-import hudson.model.Job;
-import hudson.plugins.git.GitSCM;
-import hudson.scm.SCM;
-import hudson.search.Search;
-import hudson.search.SearchIndex;
-import hudson.security.ACL;
-import jenkins.branch.MultiBranchProject;
-import jenkins.plugins.git.GitSCMSource;
-import jenkins.scm.api.SCMHead;
-
-import static jenkins.plugins.git.AbstractGitSCMSource.SCMRevisionImpl;
-
-import jenkins.plugins.git.GitSCMFileSystem;
-import jenkins.scm.api.SCMSource;
-import jenkins.scm.api.SCMSourceCriteria;
-import jenkins.scm.api.SCMSourceOwner;
-import org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.jvnet.hudson.test.JenkinsRule;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.modules.junit4.PowerMockRunner;
-import org.powermock.core.classloader.annotations.PrepareForTest;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
-
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-
-import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 import java.util.Arrays;
+import java.util.List;
 
+import org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject;
 import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mockito;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 
-import javax.annotation.Nonnull;
+import hudson.model.TaskListener;
+import hudson.plugins.git.GitSCM;
+import hudson.scm.SCM;
+import jenkins.plugins.git.GitSCMFileSystem;
+import jenkins.plugins.git.GitSCMSource;
+import jenkins.plugins.git.AbstractGitSCMSource.SCMRevisionImpl;
+import jenkins.scm.api.SCMHead;
+import jenkins.scm.api.SCMRevision;
+import jenkins.scm.api.SCMSourceOwner;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({IgnoreCommitterStrategy.class, GitSCMSource.class})
@@ -77,6 +58,7 @@ public class IgnoreCommitterStrategyTest {
     private GitSCMSource source;
     private SCMRevisionImpl currRevision;
     private SCMRevisionImpl prevRevision;
+    private SCMRevisionImpl lastSeenRevision;
     private List<String> ignoredAuthors = Arrays.asList("jenkins@example.com", "jenkins-ci@example.com");
     private List<String> nonIgnoredAuthors = Arrays.asList("hello@example.com", "john.galt@whois.com");
     private SCM scm;
@@ -89,6 +71,7 @@ public class IgnoreCommitterStrategyTest {
         this.source = sourceMock;
         this.currRevision = new SCMRevisionImpl(head, "222");
         this.prevRevision = new SCMRevisionImpl(head, "111");
+        this.lastSeenRevision = new SCMRevisionImpl(head, "111");
         this.scm = new GitSCM("http://example.com.au");
     }
 
@@ -182,8 +165,7 @@ public class IgnoreCommitterStrategyTest {
             IgnoreCommitterStrategy IgnoreCommitterStrategy = new IgnoreCommitterStrategy(
                     String.join(",", ignoredAuthors), false
             );
-
-            return IgnoreCommitterStrategy.isAutomaticBuild(source, head, currRevision, prevRevision);
+            return IgnoreCommitterStrategy.isAutomaticBuild(source, head, currRevision, prevRevision, lastSeenRevision, null);
         } catch (Exception e) {
             throw e;
         }
