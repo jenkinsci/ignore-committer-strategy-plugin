@@ -30,7 +30,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>3.2</version>
+        <version>4.3</version>
         <relativePath />
     </parent>
 
@@ -44,7 +44,7 @@
     <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
 
     <properties>
-        <jenkins.version>2.86</jenkins.version>
+        <jenkins.version>2.164.3</jenkins.version>
         <scm-api.version>2.2.6</scm-api.version>
         <git-plugin.version>3.6.0</git-plugin.version>
         <java.level>8</java.level>
@@ -87,16 +87,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.kohsuke</groupId>
-            <artifactId>access-modifier-annotation</artifactId>
-            <version>1.11</version>
-        </dependency>
-        <dependency>
-            <groupId>org.jenkins-ci</groupId>
-            <artifactId>annotation-indexer</artifactId>
-            <version>1.12</version>
-        </dependency>
-        <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>junit</artifactId>
             <version>1.3</version>
@@ -110,7 +100,7 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>github-api</artifactId>
-            <version>1.90</version>
+            <version>1.114.2</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
@@ -126,14 +116,28 @@
         <dependency>
             <groupId>org.powermock</groupId>
             <artifactId>powermock-module-junit4</artifactId>
-            <version>1.6.4</version>
+            <version>2.0.7</version>
             <scope>test</scope>
+            <exclusions>
+                <!-- Provided by jenkins test harness -->
+                <exclusion>
+                    <groupId>org.hamcrest</groupId>
+                    <artifactId>hamcrest-core</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.powermock</groupId>
-            <artifactId>powermock-api-mockito</artifactId>
-            <version>1.6.4</version>
+            <artifactId>powermock-api-mockito2</artifactId>
+            <version>2.0.7</version>
             <scope>test</scope>
+            <exclusions>
+                <!-- Provided by jenkins test harness -->
+                <exclusion>
+                    <groupId>org.hamcrest</groupId>
+                    <artifactId>hamcrest-core</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <!-- For interactive testing via hpi:run -->
         <dependency>
