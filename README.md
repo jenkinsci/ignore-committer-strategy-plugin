@@ -1,6 +1,6 @@
 Jenkins Ignore Committer Strategy Plugin
 ==========================================
-This plugin provides addition configuration to prevent multi branch projects from triggering new builds based on a blacklist of users.
+This plugin provides addition configuration to prevent multi branch projects from triggering new builds based on a list of ignored email addresses.
 
 Installation & Configuration
 ============================

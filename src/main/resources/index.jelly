@@ -25,5 +25,5 @@
 -->
 <div>
   This plugin provides addition configuration to prevent multi branch projects from triggering new builds
-  based on a blacklist of users.
+  based on a list of ignored email addresses.
 </div>
