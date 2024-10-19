@@ -83,7 +83,7 @@ public class IgnoreCommitterStrategy extends BranchBuildStrategy {
      * @return true if changeset does not have commits by ignored users or at least one user is not excluded and {allowBuildIfNotExcludedAuthor} is true
      */
     @Override
-    public boolean isAutomaticBuild(SCMSource source, SCMHead head, SCMRevision currRevision, SCMRevision prevRevision, SCMRevision lastSeenRevision, TaskListener listener) {
+    public boolean isAutomaticBuild(SCMSource source, SCMHead head, SCMRevision currRevision, SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision, TaskListener listener) {
         GitSCMFileSystem.Builder builder = new GitSCMFileSystem.BuilderImpl();
 
         try {
@@ -109,10 +109,10 @@ public class IgnoreCommitterStrategy extends BranchBuildStrategy {
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
 
-            if (prevRevision != null && !(prevRevision instanceof AbstractGitSCMSource.SCMRevisionImpl)) {
-                fileSystem.changesSince(new AbstractGitSCMSource.SCMRevisionImpl(head,prevRevision.toString().substring(0,40)), out);
+            if (lastBuiltRevision != null && !(lastBuiltRevision instanceof AbstractGitSCMSource.SCMRevisionImpl)) {
+                fileSystem.changesSince(new AbstractGitSCMSource.SCMRevisionImpl(head,lastBuiltRevision.toString().substring(0,40)), out);
             } else {
-                fileSystem.changesSince(prevRevision, out);
+                fileSystem.changesSince(lastBuiltRevision, out);
             }
 
             GitChangeLogParser parser = new GitChangeLogParser(true);
