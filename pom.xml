@@ -39,8 +39,6 @@
     <version>1.0.5-SNAPSHOT</version>
     <packaging>hpi</packaging>
     <name>Ignore Committer Strategy</name>
-    <description>This plugin provides additional configuration to prevent multi branch projects from triggering new builds
-        based on a list of email addresses of commit authors.</description>
     <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
 
     <properties>
