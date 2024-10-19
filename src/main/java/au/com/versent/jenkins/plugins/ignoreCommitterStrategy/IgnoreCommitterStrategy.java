@@ -24,11 +24,9 @@
 package au.com.versent.jenkins.plugins.ignoreCommitterStrategy;
 
 
-import edu.umd.cs.findbugs.annotations.CheckForNull;
 import hudson.Extension;
-import hudson.model.Job;
+import hudson.model.TaskListener;
 import hudson.scm.SCM;
-import jenkins.model.Jenkins;
 import jenkins.plugins.git.AbstractGitSCMSource;
 import jenkins.scm.api.*;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -85,7 +83,7 @@ public class IgnoreCommitterStrategy extends BranchBuildStrategy {
      * @return true if changeset does not have commits by ignored users or at least one user is not excluded and {allowBuildIfNotExcludedAuthor} is true
      */
     @Override
-    public boolean isAutomaticBuild(SCMSource source, SCMHead head, SCMRevision currRevision, SCMRevision prevRevision) {
+    public boolean isAutomaticBuild(SCMSource source, SCMHead head, SCMRevision currRevision, SCMRevision prevRevision, SCMRevision lastSeenRevision, TaskListener listener) {
         GitSCMFileSystem.Builder builder = new GitSCMFileSystem.BuilderImpl();
 
         try {
