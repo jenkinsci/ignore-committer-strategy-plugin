@@ -87,55 +87,55 @@ public class IgnoreCommitterStrategyTest {
     }
 
     @Test
-    public void testIsAutomaticBuildEmptyIgnoredAuthors() throws Throwable {
+    public void testIsAutomaticBuildEmptyIgnoredAuthors() {
         strategy = new IgnoreCommitterStrategy("", true);
         assertTrue(strategy.isAutomaticBuild(source, head, currRevision, prevRevision, lastSeenRevision, listener));
     }
 
     @Test
-    public void testIsAutomaticBuildEmptyIgnoredAuthorsNoBuildIfExcluded() throws Throwable {
+    public void testIsAutomaticBuildEmptyIgnoredAuthorsNoBuildIfExcluded() {
         strategy = new IgnoreCommitterStrategy("", false);
         assertTrue(strategy.isAutomaticBuild(source, head, currRevision, prevRevision, lastSeenRevision, listener));
     }
 
     @Test
-    public void testIsAutomaticBuildValidIgnoredAuthor() throws Throwable {
+    public void testIsAutomaticBuildValidIgnoredAuthor() {
         strategy = new IgnoreCommitterStrategy("gits@mpleRepoRule", true); // Author from sampleRepoRule
         assertFalse(strategy.isAutomaticBuild(source, head, currRevision, prevRevision, lastSeenRevision, listener));
     }
 
     @Test
-    public void testIsAutomaticBuildValidIgnoredAuthors() throws Throwable {
+    public void testIsAutomaticBuildValidIgnoredAuthors() {
         strategy = new IgnoreCommitterStrategy("gits@mpleRepoRule,ignore@example.com", true);
         assertFalse(strategy.isAutomaticBuild(source, head, currRevision, prevRevision, lastSeenRevision, listener));
     }
 
     @Test
-    public void testIsAutomaticBuildValidIgnoredAuthorsNoBuildIfExcluded() throws Throwable {
+    public void testIsAutomaticBuildValidIgnoredAuthorsNoBuildIfExcluded() {
         strategy = new IgnoreCommitterStrategy("ignore@example.com,gits@mpleRepoRule", false);
         assertFalse(strategy.isAutomaticBuild(source, head, currRevision, prevRevision, lastSeenRevision, listener));
     }
 
     @Test
-    public void testIsAutomaticBuildValidIgnoredAuthorNullRevision() throws Throwable {
+    public void testIsAutomaticBuildValidIgnoredAuthorNullRevision() {
         strategy = new IgnoreCommitterStrategy("gits@mpleRepoRule,other@example.com", true);
         assertFalse(strategy.isAutomaticBuild(source, head, currRevision, prevRevision, null, listener));
     }
 
     @Test
-    public void testIsAutomaticBuildValidIgnoredAuthorsNullRevision() throws Throwable {
+    public void testIsAutomaticBuildValidIgnoredAuthorsNullRevision() {
         strategy = new IgnoreCommitterStrategy("gits@mpleRepoRule,ignore@example.com,other@example.com", true);
         assertFalse(strategy.isAutomaticBuild(source, head, currRevision, null, lastSeenRevision, listener));
     }
 
     @Test
-    public void testIsAutomaticBuildValidIgnoredAuthorsNullRevisions() throws Throwable {
+    public void testIsAutomaticBuildValidIgnoredAuthorsNullRevisions() {
         strategy = new IgnoreCommitterStrategy("gits@mpleRepoRule,ignore@example.com,other@example.com", true);
         assertFalse(strategy.isAutomaticBuild(source, head, currRevision, null, null, listener));
     }
 
     @Test
-    public void testIsAutomaticBuildValidIgnoredAuthorsNoBuildIfExcludedNullRevision() throws Throwable {
+    public void testIsAutomaticBuildValidIgnoredAuthorsNoBuildIfExcludedNullRevision() {
         strategy = new IgnoreCommitterStrategy("ignore@example.com,gits@mpleRepoRule", false);
         assertFalse(strategy.isAutomaticBuild(source, head, null, prevRevision, lastSeenRevision, listener));
     }
@@ -145,7 +145,7 @@ public class IgnoreCommitterStrategyTest {
 
     // Incorrect value test case - null owner
     @Test
-    public void testNullOwner() throws Throwable {
+    public void testNullOwner() {
         strategy = new IgnoreCommitterStrategy("gits@mpleRepoRule", false);
         source.setOwner(null);
         assertTrue(strategy.isAutomaticBuild(source, head, currRevision, prevRevision, lastSeenRevision, listener));
