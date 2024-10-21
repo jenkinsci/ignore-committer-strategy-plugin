@@ -25,6 +25,7 @@ package au.com.versent.jenkins.plugins.ignoreCommitterStrategy;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+
 import org.junit.jupiter.api.Test;
 
 public class IgnoreCommitterStrategySimpleTest {
