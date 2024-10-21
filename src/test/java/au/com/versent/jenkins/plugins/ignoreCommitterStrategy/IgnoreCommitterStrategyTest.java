@@ -23,6 +23,9 @@
  */
 package au.com.versent.jenkins.plugins.ignoreCommitterStrategy;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import hudson.model.TaskListener;
 import jenkins.plugins.git.GitRefSCMHead;
 import jenkins.plugins.git.GitRefSCMRevision;
@@ -31,8 +34,6 @@ import jenkins.plugins.git.GitSampleRepoRule;
 import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceOwner;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -105,14 +106,38 @@ public class IgnoreCommitterStrategyTest {
 
     @Test
     public void testIsAutomaticBuildValidIgnoredAuthors() throws Throwable {
-        strategy = new IgnoreCommitterStrategy("gits@mpleRepoRule,ignore@example.com", true); // Author from sampleRepoRule
+        strategy = new IgnoreCommitterStrategy("gits@mpleRepoRule,ignore@example.com", true);
         assertFalse(strategy.isAutomaticBuild(source, head, currRevision, prevRevision, lastSeenRevision, listener));
     }
 
     @Test
     public void testIsAutomaticBuildValidIgnoredAuthorsNoBuildIfExcluded() throws Throwable {
-        strategy = new IgnoreCommitterStrategy("ignore@example.com,gits@mpleRepoRule", false); // Author from sampleRepoRule
+        strategy = new IgnoreCommitterStrategy("ignore@example.com,gits@mpleRepoRule", false);
         assertFalse(strategy.isAutomaticBuild(source, head, currRevision, prevRevision, lastSeenRevision, listener));
+    }
+
+    @Test
+    public void testIsAutomaticBuildValidIgnoredAuthorNullRevision() throws Throwable {
+        strategy = new IgnoreCommitterStrategy("gits@mpleRepoRule,other@example.com", true);
+        assertFalse(strategy.isAutomaticBuild(source, head, currRevision, prevRevision, null, listener));
+    }
+
+    @Test
+    public void testIsAutomaticBuildValidIgnoredAuthorsNullRevision() throws Throwable {
+        strategy = new IgnoreCommitterStrategy("gits@mpleRepoRule,ignore@example.com,other@example.com", true);
+        assertFalse(strategy.isAutomaticBuild(source, head, currRevision, null, lastSeenRevision, listener));
+    }
+
+    @Test
+    public void testIsAutomaticBuildValidIgnoredAuthorsNullRevisions() throws Throwable {
+        strategy = new IgnoreCommitterStrategy("gits@mpleRepoRule,ignore@example.com,other@example.com", true);
+        assertFalse(strategy.isAutomaticBuild(source, head, currRevision, null, null, listener));
+    }
+
+    @Test
+    public void testIsAutomaticBuildValidIgnoredAuthorsNoBuildIfExcludedNullRevision() throws Throwable {
+        strategy = new IgnoreCommitterStrategy("ignore@example.com,gits@mpleRepoRule", false);
+        assertFalse(strategy.isAutomaticBuild(source, head, null, prevRevision, lastSeenRevision, listener));
     }
 
     private static abstract class FakeSCMSourceOwner implements SCMSourceOwner {
