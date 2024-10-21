@@ -81,7 +81,7 @@ public class IgnoreCommitterStrategyTest {
         head = new GitRefSCMHead(branchName);
         currRevision = new GitRefSCMRevision(head, commit2);
         prevRevision = new GitRefSCMRevision(head, commit1);
-        lastSeenRevision = new GitRefSCMRevision(head, commit1);
+        lastSeenRevision = prevRevision;
         listener = TaskListener.NULL;
     }
 
