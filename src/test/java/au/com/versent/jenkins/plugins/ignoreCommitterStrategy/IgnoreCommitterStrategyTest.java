@@ -54,7 +54,7 @@ public class IgnoreCommitterStrategyTest {
     }
 
     private static String branchName;
-    private static String commit1, commit2, commit3;
+    private static String commit1, commit2;
 
     @BeforeClass
     public static void createGitRepository() throws Exception {
@@ -63,11 +63,8 @@ public class IgnoreCommitterStrategyTest {
         commit1 = sampleRepo.head();
         sampleRepo.git("checkout", "-b", branchName);
         sampleRepo.write("file", "modified-file");
-        sampleRepo.git("commit", "--all", "--message=commit-1-to-branch-" + branchName);
+        sampleRepo.git("commit", "--all", "--message=commit-to-branch-" + branchName);
         commit2 = sampleRepo.head();
-        sampleRepo.write("file", "modified-file-again");
-        sampleRepo.git("commit", "--all", "--message=commit-2-to-branch-" + branchName);
-        commit3 = sampleRepo.head();
     }
 
     private SCMSource source;
@@ -82,8 +79,8 @@ public class IgnoreCommitterStrategyTest {
         owner = Mockito.mock(FakeSCMSourceOwner.class);
         source.setOwner(owner);
         head = new GitRefSCMHead(branchName);
-        currRevision = new GitRefSCMRevision(head, commit3);
-        prevRevision = new GitRefSCMRevision(head, commit2);
+        currRevision = new GitRefSCMRevision(head, commit2);
+        prevRevision = new GitRefSCMRevision(head, commit1);
         lastSeenRevision = new GitRefSCMRevision(head, commit1);
         listener = TaskListener.NULL;
     }
