@@ -33,10 +33,13 @@ import hudson.model.TaskListener;
 import hudson.util.StreamTaskListener;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.Charset;
+import java.util.Objects;
+import java.util.Random;
 import jenkins.plugins.git.GitRefSCMHead;
 import jenkins.plugins.git.GitRefSCMRevision;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
+import jenkins.scm.api.SCMHead;
 import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceOwner;
@@ -93,8 +96,32 @@ public class IgnoreCommitterStrategyTest {
         listener = new StreamTaskListener(baos, Charset.defaultCharset());
     }
 
+    private final Random picker = new Random();
+
+    private String getKnownAuthor() {
+        String known = "gits@mpleRepoRule";
+        String[] knownAuthors = {
+            known,
+            "other@example.com," + known,
+            known + ",not-other@example.com",
+            "other@example.com," + known + ",not-other@example.com"
+        };
+        return knownAuthors[picker.nextInt(knownAuthors.length)];
+    }
+
+    private String getUnknownAuthor() {
+        String unknown = "unknown@example.com";
+        String[] unknownAuthors = {
+            unknown,
+            "other@example.com," + unknown,
+            unknown + ",not-other@example.com",
+            "other@example.com," + unknown + ",not-other@example.com"
+        };
+        return unknownAuthors[picker.nextInt(unknownAuthors.length)];
+    }
+
     @Test
-    public void testIsAutomaticBuildEmptyIgnoredAuthors() {
+    public void testIsAutomaticBuildEmptyIgnoredAuthorsTrue() {
         strategy = new IgnoreCommitterStrategy("", true);
         boolean result =
                 strategy.isAutomaticBuild(source, head, currRevision, prevRevision, lastSeenRevision, listener);
@@ -104,84 +131,152 @@ public class IgnoreCommitterStrategyTest {
     }
 
     @Test
-    public void testIsAutomaticBuildEmptyIgnoredAuthorsNoBuildIfExcluded() {
+    public void testIsAutomaticBuildEmptyIgnoredAuthorsFalse() {
         strategy = new IgnoreCommitterStrategy("", false);
         boolean result =
                 strategy.isAutomaticBuild(source, head, currRevision, prevRevision, lastSeenRevision, listener);
-        String msg = "All commits in the changeset are made by Non excluded authors, build is true";
+        String msg = "All commits in the changeset are made by non-excluded authors, build is true";
         assertThat(baos.toString(Charset.defaultCharset()), containsString(msg));
         assertTrue(result);
     }
 
     @Test
-    public void testIsAutomaticBuildValidIgnoredAuthor() {
-        strategy = new IgnoreCommitterStrategy("gits@mpleRepoRule", true); // Author from sampleRepoRule
+    public void testIsAutomaticBuildValidIgnoredAuthorTrue() {
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), true);
         boolean result =
                 strategy.isAutomaticBuild(source, head, currRevision, prevRevision, lastSeenRevision, listener);
-        String msg = "Ignored authors: [gits@mplereporule]";
-        assertThat(baos.toString(Charset.defaultCharset()), startsWith(msg));
+        String msg = "All commits in the changeset are made by excluded authors, build is false";
+        assertThat(baos.toString(Charset.defaultCharset()), containsString(msg));
         assertFalse(result);
     }
 
     @Test
-    public void testIsAutomaticBuildValidIgnoredAuthors() {
-        strategy = new IgnoreCommitterStrategy("gits@mpleRepoRule,ignore@example.com", true);
+    public void testIsAutomaticBuildValidIgnoredAuthorFalse() {
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false);
         boolean result =
                 strategy.isAutomaticBuild(source, head, currRevision, prevRevision, lastSeenRevision, listener);
-        String msg = "Ignored authors: [gits@mplereporule, ignore@example.com]";
-        assertThat(baos.toString(Charset.defaultCharset()), startsWith(msg));
-        assertFalse(result);
-    }
-
-    @Test
-    public void testIsAutomaticBuildValidIgnoredAuthorsNoBuildIfExcluded() {
-        strategy = new IgnoreCommitterStrategy("ignore@example.com,gits@mpleRepoRule", false);
-        boolean result =
-                strategy.isAutomaticBuild(source, head, currRevision, prevRevision, lastSeenRevision, listener);
-        String msg = "Ignored authors: [ignore@example.com, gits@mplereporule]";
-        String msg2 = "contains ignored author gits@mplereporule";
-        assertThat(baos.toString(Charset.defaultCharset()), startsWith(msg));
+        String msg = "Changeset contains ignored author gits@mplereporule";
+        assertThat(baos.toString(Charset.defaultCharset()), containsString(msg));
+        String msg2 = "allowBuildIfNotExcludedAuthor is false, therefore build is not required";
         assertThat(baos.toString(Charset.defaultCharset()), containsString(msg2));
         assertFalse(result);
     }
 
     @Test
-    public void testIsAutomaticBuildValidIgnoredAuthorNullRevision() {
-        strategy = new IgnoreCommitterStrategy("gits@mpleRepoRule,other@example.com", true);
+    public void testIsAutomaticBuildValidIgnoredAuthorNullRevisionTrue() {
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), true);
         boolean result = strategy.isAutomaticBuild(source, head, currRevision, prevRevision, null, listener);
-        String msg = "Ignored authors: [gits@mplereporule, other@example.com]";
-        assertThat(baos.toString(Charset.defaultCharset()), startsWith(msg));
+        String msg = "All commits in the changeset are made by excluded authors, build is false";
+        assertThat(baos.toString(Charset.defaultCharset()), containsString(msg));
         assertFalse(result);
     }
 
     @Test
-    public void testIsAutomaticBuildValidIgnoredAuthorsNullRevision() {
-        strategy = new IgnoreCommitterStrategy("gits@mpleRepoRule,ignore@example.com,other@example.com", true);
-        boolean result = strategy.isAutomaticBuild(source, head, currRevision, null, lastSeenRevision, listener);
-        String msg = "Ignored authors: [gits@mplereporule, ignore@example.com, other@example.com]";
-        assertThat(baos.toString(Charset.defaultCharset()), startsWith(msg));
+    public void testIsAutomaticBuildValidIgnoredAuthorNullRevisionFalse() {
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false);
+        boolean result = strategy.isAutomaticBuild(source, head, currRevision, prevRevision, null, listener);
+        String msg = "Changeset contains ignored author gits@mplereporule";
+        assertThat(baos.toString(Charset.defaultCharset()), containsString(msg));
+        String msg2 = "allowBuildIfNotExcludedAuthor is false, therefore build is not required";
+        assertThat(baos.toString(Charset.defaultCharset()), containsString(msg2));
         assertFalse(result);
     }
 
     @Test
-    public void testIsAutomaticBuildValidIgnoredAuthorsNullRevisions() {
-        strategy = new IgnoreCommitterStrategy("gits@mpleRepoRule,ignore@example.com,other@example.com", true);
-        boolean result = strategy.isAutomaticBuild(source, head, currRevision, null, null, listener);
-        String msg = "Ignored authors: [gits@mplereporule, ignore@example.com, other@example.com]";
-        assertThat(baos.toString(Charset.defaultCharset()), startsWith(msg));
-        assertFalse(result);
-    }
-
-    @Test
-    public void testIsAutomaticBuildValidIgnoredAuthorsNoBuildIfExcludedNullRevision() {
-        strategy = new IgnoreCommitterStrategy("ignore@example.com,gits@mpleRepoRule", false);
-        boolean result = strategy.isAutomaticBuild(source, head, null, prevRevision, lastSeenRevision, listener);
-        String msg = "Ignored authors: [ignore@example.com, gits@mplereporule]";
-        assertThat(baos.toString(Charset.defaultCharset()), startsWith(msg));
+    public void testSCMRevisionNotGitRefSCMRevision() {
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false);
+        MySCMRevision latestrevision = new MySCMRevision(currRevision.getHead(), commit2);
+        MySCMRevision priorRevision = new MySCMRevision(currRevision.getHead(), commit1);
+        boolean result =
+                strategy.isAutomaticBuild(source, head, latestrevision, priorRevision, priorRevision, listener);
         assertThat(
                 baos.toString(Charset.defaultCharset()),
                 containsString("Changeset contains ignored author gits@mplereporule"));
         assertFalse(result);
+    }
+
+    @Test
+    public void testSCMRevisionNotGitRefSCMRevisionAllowBuildsIfExcludedAuthor() {
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), true);
+        MySCMRevision latestrevision = new MySCMRevision(currRevision.getHead(), commit2);
+        MySCMRevision priorRevision = new MySCMRevision(currRevision.getHead(), commit1);
+        boolean result =
+                strategy.isAutomaticBuild(source, head, latestrevision, priorRevision, priorRevision, listener);
+        String msg = "All commits in the changeset are made by excluded authors, build is false";
+        assertThat(baos.toString(Charset.defaultCharset()), containsString(msg));
+        assertFalse(result);
+    }
+
+    @Test
+    public void testSCMRevisionNotGitRefSCMRevisionNoExcludingAuthorTrue() {
+        strategy = new IgnoreCommitterStrategy(getUnknownAuthor(), true);
+        MySCMRevision latestrevision = new MySCMRevision(currRevision.getHead(), commit2);
+        MySCMRevision priorRevision = new MySCMRevision(currRevision.getHead(), commit1);
+        boolean result =
+                strategy.isAutomaticBuild(source, head, latestrevision, priorRevision, priorRevision, listener);
+        String msg = "Changeset contains non ignored author gits@mplereporule";
+        assertThat(baos.toString(Charset.defaultCharset()), containsString(msg));
+        assertTrue(result);
+    }
+
+    @Test
+    public void testSCMRevisionNotGitRefSCMRevisionNoExcludingAuthorFalse() {
+        strategy = new IgnoreCommitterStrategy(getUnknownAuthor(), false);
+        MySCMRevision latestrevision = new MySCMRevision(currRevision.getHead(), commit2);
+        MySCMRevision priorRevision = new MySCMRevision(currRevision.getHead(), commit1);
+        boolean result =
+                strategy.isAutomaticBuild(source, head, latestrevision, priorRevision, priorRevision, listener);
+        String msg = "All commits in the changeset are made by non-excluded authors, build is true";
+        assertThat(baos.toString(Charset.defaultCharset()), containsString(msg));
+        assertTrue(result);
+    }
+
+    @Test
+    public void testSCMRevisionNotGitRefSCMRevisionAndInvalidHash() {
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false);
+        MySCMRevision revision = new MySCMRevision(currRevision.getHead(), "0000" + commit1);
+        boolean result = strategy.isAutomaticBuild(source, head, revision, revision, revision, listener);
+        String msg = "All commits in the changeset are made by non-excluded authors, build is true";
+        assertThat(baos.toString(Charset.defaultCharset()), containsString(msg));
+        assertTrue(result);
+    }
+
+    private static class MySCMRevision extends SCMRevision {
+
+        private final String hash;
+
+        public MySCMRevision(SCMHead head, String hash) {
+            super(head);
+            this.hash = hash;
+        }
+
+        public String getHash() {
+            return hash;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            MySCMRevision that = (MySCMRevision) o;
+
+            return Objects.equals(hash, that.hash) && Objects.equals(getHead(), that.getHead());
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(hash, getHead());
+        }
+
+        @Override
+        public String toString() {
+            return hash;
+        }
     }
 
     private abstract static class FakeSCMSourceOwner implements SCMSourceOwner {}
