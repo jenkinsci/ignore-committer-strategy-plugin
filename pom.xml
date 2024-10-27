@@ -92,12 +92,6 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>git-client</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>io.jenkins.test.fips</groupId>
-          <artifactId>fips-bundle-test</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
