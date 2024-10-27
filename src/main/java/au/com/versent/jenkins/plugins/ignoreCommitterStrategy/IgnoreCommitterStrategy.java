@@ -163,8 +163,9 @@ public class IgnoreCommitterStrategy extends BranchBuildStrategy {
             // case return true
             listener.getLogger()
                     .printf(
-                            "All commits in the changeset are made by %sexcluded authors, build is %s%n",
-                            allowBuildIfNotExcludedAuthor ? "" : "non-", !allowBuildIfNotExcludedAuthor);
+                            "All commits in the changeset are made by %s authors, build is %s%n",
+                            allowBuildIfNotExcludedAuthor ? "excluded" : "non-excluded",
+                            !allowBuildIfNotExcludedAuthor);
 
             return !allowBuildIfNotExcludedAuthor;
         } catch (Exception e) {
