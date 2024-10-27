@@ -151,6 +151,7 @@ public class IgnoreCommitterStrategyTest {
         boolean result = strategy.isAutomaticBuild(source, head, currRevision, prevRevision, null, listener);
         String msg = "Ignored authors: [gits@mplereporule, other@example.com]";
         assertThat(baos.toString(Charset.defaultCharset()), startsWith(msg));
+        assertFalse(result);
     }
 
     @Test
@@ -159,6 +160,7 @@ public class IgnoreCommitterStrategyTest {
         boolean result = strategy.isAutomaticBuild(source, head, currRevision, null, lastSeenRevision, listener);
         String msg = "Ignored authors: [gits@mplereporule, ignore@example.com, other@example.com]";
         assertThat(baos.toString(Charset.defaultCharset()), startsWith(msg));
+        assertFalse(result);
     }
 
     @Test
@@ -167,6 +169,7 @@ public class IgnoreCommitterStrategyTest {
         boolean result = strategy.isAutomaticBuild(source, head, currRevision, null, null, listener);
         String msg = "Ignored authors: [gits@mplereporule, ignore@example.com, other@example.com]";
         assertThat(baos.toString(Charset.defaultCharset()), startsWith(msg));
+        assertFalse(result);
     }
 
     @Test
@@ -178,6 +181,7 @@ public class IgnoreCommitterStrategyTest {
         assertThat(
                 baos.toString(Charset.defaultCharset()),
                 containsString("Changeset contains ignored author gits@mplereporule"));
+        assertFalse(result);
     }
 
     private abstract static class FakeSCMSourceOwner implements SCMSourceOwner {}
