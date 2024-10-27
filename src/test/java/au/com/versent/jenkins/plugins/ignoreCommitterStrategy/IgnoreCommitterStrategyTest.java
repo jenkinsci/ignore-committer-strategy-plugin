@@ -233,6 +233,16 @@ public class IgnoreCommitterStrategyTest {
         assertTrue(result);
     }
 
+    @Test
+    public void testSCMRevisionNotGitRefSCMRevisionAndTooShort() {
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false);
+        MySCMRevision myCurrent = new MySCMRevision(current.getHead(), "deed"); // Valid SHA1 but too short
+        boolean result = strategy.isAutomaticBuild(source, head, myCurrent, myCurrent, myCurrent, listener);
+        String msg = "ERROR: Exception: java.lang.StringIndexOutOfBoundsException";
+        assertThat(baos.toString(Charset.defaultCharset()), containsString(msg));
+        assertTrue(result);
+    }
+
     private static class MySCMRevision extends SCMRevision {
 
         private final String hash;
