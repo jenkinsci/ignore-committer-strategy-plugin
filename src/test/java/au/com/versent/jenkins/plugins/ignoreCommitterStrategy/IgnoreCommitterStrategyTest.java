@@ -23,10 +23,16 @@
  */
 package au.com.versent.jenkins.plugins.ignoreCommitterStrategy;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.startsWith;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import hudson.model.TaskListener;
+import hudson.util.StreamTaskListener;
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.Charset;
 import jenkins.plugins.git.GitRefSCMHead;
 import jenkins.plugins.git.GitRefSCMRevision;
 import jenkins.plugins.git.GitSCMSource;
@@ -51,8 +57,7 @@ public class IgnoreCommitterStrategyTest {
 
     private IgnoreCommitterStrategy strategy;
 
-    public IgnoreCommitterStrategyTest() {
-    }
+    public IgnoreCommitterStrategyTest() {}
 
     private static String branchName;
     private static String commit1, commit2;
@@ -73,6 +78,7 @@ public class IgnoreCommitterStrategyTest {
     private GitRefSCMHead head;
     private SCMRevision currRevision, prevRevision, lastSeenRevision;
     private TaskListener listener;
+    private ByteArrayOutputStream baos;
 
     @Before
     public void createSCMSource() {
@@ -83,71 +89,107 @@ public class IgnoreCommitterStrategyTest {
         currRevision = new GitRefSCMRevision(head, commit2);
         prevRevision = new GitRefSCMRevision(head, commit1);
         lastSeenRevision = prevRevision;
-        listener = TaskListener.NULL;
+        baos = new ByteArrayOutputStream();
+        listener = new StreamTaskListener(baos, Charset.defaultCharset());
     }
 
     @Test
     public void testIsAutomaticBuildEmptyIgnoredAuthors() {
         strategy = new IgnoreCommitterStrategy("", true);
-        assertTrue(strategy.isAutomaticBuild(source, head, currRevision, prevRevision, lastSeenRevision, listener));
+        boolean result =
+                strategy.isAutomaticBuild(source, head, currRevision, prevRevision, lastSeenRevision, listener);
+        String msg = "Changeset contains non ignored author gits@mplereporule";
+        assertThat(baos.toString(Charset.defaultCharset()), containsString(msg));
+        assertTrue(result);
     }
 
     @Test
     public void testIsAutomaticBuildEmptyIgnoredAuthorsNoBuildIfExcluded() {
         strategy = new IgnoreCommitterStrategy("", false);
-        assertTrue(strategy.isAutomaticBuild(source, head, currRevision, prevRevision, lastSeenRevision, listener));
+        boolean result =
+                strategy.isAutomaticBuild(source, head, currRevision, prevRevision, lastSeenRevision, listener);
+        String msg = "All commits in the changeset are made by Non excluded authors, build is true";
+        assertThat(baos.toString(Charset.defaultCharset()), containsString(msg));
+        assertTrue(result);
     }
 
     @Test
     public void testIsAutomaticBuildValidIgnoredAuthor() {
         strategy = new IgnoreCommitterStrategy("gits@mpleRepoRule", true); // Author from sampleRepoRule
-        assertFalse(strategy.isAutomaticBuild(source, head, currRevision, prevRevision, lastSeenRevision, listener));
+        boolean result =
+                strategy.isAutomaticBuild(source, head, currRevision, prevRevision, lastSeenRevision, listener);
+        String msg = "Ignored authors: [gits@mplereporule]";
+        assertThat(baos.toString(Charset.defaultCharset()), startsWith(msg));
+        assertFalse(result);
     }
 
     @Test
     public void testIsAutomaticBuildValidIgnoredAuthors() {
         strategy = new IgnoreCommitterStrategy("gits@mpleRepoRule,ignore@example.com", true);
-        assertFalse(strategy.isAutomaticBuild(source, head, currRevision, prevRevision, lastSeenRevision, listener));
+        boolean result =
+                strategy.isAutomaticBuild(source, head, currRevision, prevRevision, lastSeenRevision, listener);
+        String msg = "Ignored authors: [gits@mplereporule, ignore@example.com]";
+        assertThat(baos.toString(Charset.defaultCharset()), startsWith(msg));
+        assertFalse(result);
     }
 
     @Test
     public void testIsAutomaticBuildValidIgnoredAuthorsNoBuildIfExcluded() {
         strategy = new IgnoreCommitterStrategy("ignore@example.com,gits@mpleRepoRule", false);
-        assertFalse(strategy.isAutomaticBuild(source, head, currRevision, prevRevision, lastSeenRevision, listener));
+        boolean result =
+                strategy.isAutomaticBuild(source, head, currRevision, prevRevision, lastSeenRevision, listener);
+        String msg = "Ignored authors: [ignore@example.com, gits@mplereporule]";
+        String msg2 = "contains ignored author gits@mplereporule";
+        assertThat(baos.toString(Charset.defaultCharset()), startsWith(msg));
+        assertThat(baos.toString(Charset.defaultCharset()), containsString(msg2));
+        assertFalse(result);
     }
 
     @Test
     public void testIsAutomaticBuildValidIgnoredAuthorNullRevision() {
         strategy = new IgnoreCommitterStrategy("gits@mpleRepoRule,other@example.com", true);
-        assertFalse(strategy.isAutomaticBuild(source, head, currRevision, prevRevision, null, listener));
+        boolean result = strategy.isAutomaticBuild(source, head, currRevision, prevRevision, null, listener);
+        String msg = "Ignored authors: [gits@mplereporule, other@example.com]";
+        assertThat(baos.toString(Charset.defaultCharset()), startsWith(msg));
     }
 
     @Test
     public void testIsAutomaticBuildValidIgnoredAuthorsNullRevision() {
         strategy = new IgnoreCommitterStrategy("gits@mpleRepoRule,ignore@example.com,other@example.com", true);
-        assertFalse(strategy.isAutomaticBuild(source, head, currRevision, null, lastSeenRevision, listener));
+        boolean result = strategy.isAutomaticBuild(source, head, currRevision, null, lastSeenRevision, listener);
+        String msg = "Ignored authors: [gits@mplereporule, ignore@example.com, other@example.com]";
+        assertThat(baos.toString(Charset.defaultCharset()), startsWith(msg));
     }
 
     @Test
     public void testIsAutomaticBuildValidIgnoredAuthorsNullRevisions() {
         strategy = new IgnoreCommitterStrategy("gits@mpleRepoRule,ignore@example.com,other@example.com", true);
-        assertFalse(strategy.isAutomaticBuild(source, head, currRevision, null, null, listener));
+        boolean result = strategy.isAutomaticBuild(source, head, currRevision, null, null, listener);
+        String msg = "Ignored authors: [gits@mplereporule, ignore@example.com, other@example.com]";
+        assertThat(baos.toString(Charset.defaultCharset()), startsWith(msg));
     }
 
     @Test
     public void testIsAutomaticBuildValidIgnoredAuthorsNoBuildIfExcludedNullRevision() {
         strategy = new IgnoreCommitterStrategy("ignore@example.com,gits@mpleRepoRule", false);
-        assertFalse(strategy.isAutomaticBuild(source, head, null, prevRevision, lastSeenRevision, listener));
+        boolean result = strategy.isAutomaticBuild(source, head, null, prevRevision, lastSeenRevision, listener);
+        String msg = "Ignored authors: [ignore@example.com, gits@mplereporule]";
+        assertThat(baos.toString(Charset.defaultCharset()), startsWith(msg));
+        assertThat(
+                baos.toString(Charset.defaultCharset()),
+                containsString("Changeset contains ignored author gits@mplereporule"));
     }
 
-    private static abstract class FakeSCMSourceOwner implements SCMSourceOwner {
-    }
+    private abstract static class FakeSCMSourceOwner implements SCMSourceOwner {}
 
     // Incorrect value test case - null owner
     @Test
     public void testNullOwner() {
         strategy = new IgnoreCommitterStrategy("gits@mpleRepoRule", false);
         source.setOwner(null);
-        assertTrue(strategy.isAutomaticBuild(source, head, currRevision, prevRevision, lastSeenRevision, listener));
+        boolean result =
+                strategy.isAutomaticBuild(source, head, currRevision, prevRevision, lastSeenRevision, listener);
+        assertThat(baos.toString(Charset.defaultCharset()), startsWith("ERROR: Error retrieving SCMSourceOwner"));
+        assertTrue(result);
     }
 }
