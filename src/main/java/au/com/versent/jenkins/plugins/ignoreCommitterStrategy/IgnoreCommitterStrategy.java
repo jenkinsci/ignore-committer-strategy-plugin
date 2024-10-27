@@ -97,7 +97,7 @@ public class IgnoreCommitterStrategy extends BranchBuildStrategy {
             }
 
             SCMFileSystem fileSystem;
-            if (currRevision != null && !(currRevision instanceof AbstractGitSCMSource.SCMRevisionImpl)) {
+            if (!(currRevision instanceof AbstractGitSCMSource.SCMRevisionImpl)) {
                 fileSystem = builder.build(
                         source,
                         head,
@@ -163,8 +163,8 @@ public class IgnoreCommitterStrategy extends BranchBuildStrategy {
             // case return true
             listener.getLogger()
                     .printf(
-                            "All commits in the changeset are made by %s excluded authors, build is %s%n",
-                            allowBuildIfNotExcludedAuthor ? "" : "Non", !allowBuildIfNotExcludedAuthor);
+                            "All commits in the changeset are made by %sexcluded authors, build is %s%n",
+                            allowBuildIfNotExcludedAuthor ? "" : "non-", !allowBuildIfNotExcludedAuthor);
 
             return !allowBuildIfNotExcludedAuthor;
         } catch (Exception e) {
