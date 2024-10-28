@@ -30,6 +30,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import hudson.model.TaskListener;
+import hudson.scm.SubversionSCM;
 import hudson.util.StreamTaskListener;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.Charset;
@@ -43,6 +44,7 @@ import jenkins.scm.api.SCMHead;
 import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceOwner;
+import jenkins.scm.impl.SingleSCMSource;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -290,6 +292,18 @@ public class IgnoreCommitterStrategyTest {
         source.setOwner(null);
         boolean result = strategy.isAutomaticBuild(source, head, current, previous, lastSeen, listener);
         assertThat(baos.toString(Charset.defaultCharset()), startsWith("ERROR: Error retrieving SCMSourceOwner"));
+        assertTrue(result);
+    }
+
+    // Unsupported SCMSource test case, cannot retreive SCMFileSystem
+    @Test
+    public void testUnsupportedSCMSource() {
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false);
+        SubversionSCM scm = new SubversionSCM("http://svn.apache.org/repos/asf/xml/trunk");
+        SCMSource unsupportedSource = new SingleSCMSource("Subversion", scm);
+        unsupportedSource.setOwner(source.getOwner());
+        boolean result = strategy.isAutomaticBuild(unsupportedSource, head, current, previous, lastSeen, listener);
+        assertThat(baos.toString(Charset.defaultCharset()), startsWith("ERROR: Error retrieving SCMFileSystem"));
         assertTrue(result);
     }
 }
