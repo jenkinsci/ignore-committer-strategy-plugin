@@ -23,213 +23,287 @@
  */
 package au.com.versent.jenkins.plugins.ignoreCommitterStrategy;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.startsWith;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
-import hudson.model.Item;
-import hudson.model.ItemGroup;
-import hudson.model.Job;
-import hudson.plugins.git.GitSCM;
-import hudson.scm.SCM;
-import hudson.search.Search;
-import hudson.search.SearchIndex;
-import hudson.security.ACL;
-import jenkins.branch.MultiBranchProject;
+import hudson.model.TaskListener;
+import hudson.scm.SubversionSCM;
+import hudson.util.StreamTaskListener;
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.Charset;
+import java.util.Objects;
+import java.util.Random;
+import jenkins.plugins.git.GitRefSCMHead;
+import jenkins.plugins.git.GitRefSCMRevision;
 import jenkins.plugins.git.GitSCMSource;
+import jenkins.plugins.git.GitSampleRepoRule;
 import jenkins.scm.api.SCMHead;
-
-import static jenkins.plugins.git.AbstractGitSCMSource.SCMRevisionImpl;
-
-import jenkins.plugins.git.GitSCMFileSystem;
+import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
-import jenkins.scm.api.SCMSourceCriteria;
 import jenkins.scm.api.SCMSourceOwner;
-import org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject;
+import jenkins.scm.impl.SingleSCMSource;
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.modules.junit4.PowerMockRunner;
-import org.powermock.core.classloader.annotations.PrepareForTest;
 
-import java.io.ByteArrayOutputStream;
-
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Arrays;
-
-import org.junit.Before;
-
-import javax.annotation.Nonnull;
-
-@RunWith(PowerMockRunner.class)
-@PrepareForTest({IgnoreCommitterStrategy.class, GitSCMSource.class})
 public class IgnoreCommitterStrategyTest {
-    private SCMHead head;
-    private GitSCMSource source;
-    private SCMRevisionImpl currRevision;
-    private SCMRevisionImpl prevRevision;
-    private List<String> ignoredAuthors = Arrays.asList("jenkins@example.com", "jenkins-ci@example.com");
-    private List<String> nonIgnoredAuthors = Arrays.asList("hello@example.com", "john.galt@whois.com");
-    private SCM scm;
+
+    @ClassRule
+    public static JenkinsRule r = new JenkinsRule();
+
+    @ClassRule
+    public static GitSampleRepoRule sampleRepo = new GitSampleRepoRule();
+
+    private IgnoreCommitterStrategy strategy;
+
+    public IgnoreCommitterStrategyTest() {}
+
+    private static String branchName;
+    private static String commit1, commit2;
+
+    @BeforeClass
+    public static void createGitRepository() throws Exception {
+        branchName = "is-automatic-build-test-branch";
+        sampleRepo.init();
+        commit1 = sampleRepo.head();
+        sampleRepo.git("checkout", "-b", branchName);
+        sampleRepo.write("file", "modified-file");
+        sampleRepo.git("commit", "--all", "--message=commit-to-branch-" + branchName);
+        commit2 = sampleRepo.head();
+    }
+
+    private SCMSource source;
+    private SCMSourceOwner owner;
+    private GitRefSCMHead head;
+    private SCMRevision current, previous, lastSeen;
+    private TaskListener listener;
+    private ByteArrayOutputStream baos;
 
     @Before
-    public void setUp() {
-        GitSCMSource sourceMock = PowerMockito.mock(GitSCMSource.class);
+    public void createSCMSource() {
+        source = new GitSCMSource(sampleRepo.toString());
+        owner = Mockito.mock(FakeSCMSourceOwner.class);
+        source.setOwner(owner);
+        head = new GitRefSCMHead(branchName);
+        current = new GitRefSCMRevision(head, commit2);
+        previous = new GitRefSCMRevision(head, commit1);
+        lastSeen = previous;
+        baos = new ByteArrayOutputStream();
+        listener = new StreamTaskListener(baos, Charset.defaultCharset());
+    }
 
-        this.head = new SCMHead("test-branch");
-        this.source = sourceMock;
-        this.currRevision = new SCMRevisionImpl(head, "222");
-        this.prevRevision = new SCMRevisionImpl(head, "111");
-        this.scm = new GitSCM("http://example.com.au");
+    private final Random picker = new Random();
+    private static final String KNOWN_AUTHOR = "gits@mplereporule";
+
+    private String getKnownAuthor() {
+        String[] knownAuthors = {
+            KNOWN_AUTHOR,
+            "other@example.com," + KNOWN_AUTHOR,
+            KNOWN_AUTHOR + ",not-other@example.com",
+            "other@example.com," + KNOWN_AUTHOR + ",not-other@example.com"
+        };
+        return knownAuthors[picker.nextInt(knownAuthors.length)];
+    }
+
+    private String getUnknownAuthor() {
+        String unknown = "unknown@example.com";
+        String[] unknownAuthors = {
+            unknown,
+            "other@example.com," + unknown,
+            unknown + ",not-other@example.com",
+            "other@example.com," + unknown + ",not-other@example.com"
+        };
+        return unknownAuthors[picker.nextInt(unknownAuthors.length)];
     }
 
     @Test
-    public void testIsAutomaticBuildReturnsTrueIfAllAuthorsAreNotIgnored() throws Exception {
-
-        String commits = "";
-        for (String author : nonIgnoredAuthors) {
-            commits += getCommit(author);
-        }
-
-        assertTrue(setupIgnoreCommitterStrategy(commits));
+    public void testIsAutomaticBuildEmptyIgnoredAuthorsTrue() {
+        strategy = new IgnoreCommitterStrategy("", true);
+        boolean result = strategy.isAutomaticBuild(source, head, current, previous, lastSeen, listener);
+        String msg = "Changeset contains non ignored author " + KNOWN_AUTHOR;
+        assertThat(baos.toString(Charset.defaultCharset()), containsString(msg));
+        assertTrue(result);
     }
 
     @Test
-    public void testIsAutomaticBuildReturnsTrueIfOneAuthorIsNotIgnoredAndAllowBuildIfNotExcludedAuthor() throws Exception {
-
-        String commits = "";
-        for (String author : ignoredAuthors) {
-            commits += getCommit(author);
-        }
-        for (String author : nonIgnoredAuthors) {
-            commits += getCommit(author);
-        }
-
-        assertTrue(setupIgnoreCommitterStrategy(commits));
+    public void testIsAutomaticBuildEmptyIgnoredAuthorsFalse() {
+        strategy = new IgnoreCommitterStrategy("", false);
+        boolean result = strategy.isAutomaticBuild(source, head, current, previous, lastSeen, listener);
+        String msg = "All commits in the changeset are made by non-excluded authors, build is true";
+        assertThat(baos.toString(Charset.defaultCharset()), containsString(msg));
+        assertTrue(result);
     }
 
     @Test
-    public void testIsAutomaticBuildReturnsFalseIfAllAuthorsAreIgnoredAndAllowBuildIfNotExcludedAuthor() throws Exception {
-
-        String commits = "";
-        for (String author : ignoredAuthors) {
-            commits += getCommit(author);
-        }
-
-        assertFalse(setupIgnoreCommitterStrategy(commits));
+    public void testIsAutomaticBuildValidIgnoredAuthorTrue() {
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), true);
+        boolean result = strategy.isAutomaticBuild(source, head, current, previous, lastSeen, listener);
+        String msg = "All commits in the changeset are made by excluded authors, build is false";
+        assertThat(baos.toString(Charset.defaultCharset()), containsString(msg));
+        assertFalse(result);
     }
 
     @Test
-    public void testIsAutomaticBuildReturnsFalseIfOneAuthorIsIgnored() throws Exception {
-
-        String commits = "";
-
-        for (String author : nonIgnoredAuthors) {
-            commits += getCommit(author);
-        }
-
-        for (String author : ignoredAuthors) {
-            commits += getCommit(author);
-        }
-
-        assertFalse(setupIgnoreCommitterStrategy(commits));
+    public void testIsAutomaticBuildValidIgnoredAuthorFalse() {
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false);
+        boolean result = strategy.isAutomaticBuild(source, head, current, previous, lastSeen, listener);
+        String msg = "Changeset contains ignored author " + KNOWN_AUTHOR;
+        assertThat(baos.toString(Charset.defaultCharset()), containsString(msg));
+        String msg2 = "allowBuildIfNotExcludedAuthor is false, therefore build is not required";
+        assertThat(baos.toString(Charset.defaultCharset()), containsString(msg2));
+        assertFalse(result);
     }
 
     @Test
-    public void testIsAutomaticBuildReturnsTrueIfCommitCantbeParsed() throws Exception {
+    public void testIsAutomaticBuildValidIgnoredAuthorNullRevisionTrue() {
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), true);
+        boolean result = strategy.isAutomaticBuild(source, head, current, previous, null, listener);
+        String msg = "All commits in the changeset are made by excluded authors, build is false";
+        assertThat(baos.toString(Charset.defaultCharset()), containsString(msg));
+        assertFalse(result);
+    }
 
-        String commits = "";
+    @Test
+    public void testIsAutomaticBuildValidIgnoredAuthorNullRevisionFalse() {
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false);
+        boolean result = strategy.isAutomaticBuild(source, head, current, previous, null, listener);
+        String msg = "Changeset contains ignored author " + KNOWN_AUTHOR;
+        assertThat(baos.toString(Charset.defaultCharset()), containsString(msg));
+        String msg2 = "allowBuildIfNotExcludedAuthor is false, therefore build is not required";
+        assertThat(baos.toString(Charset.defaultCharset()), containsString(msg2));
+        assertFalse(result);
+    }
 
-        for (String author : nonIgnoredAuthors) {
-            commits += getBrokenCommit(author);
+    @Test
+    public void testSCMRevisionNotGitRefSCMRevision() {
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false);
+        MySCMRevision myCurrent = new MySCMRevision(current.getHead(), commit2);
+        MySCMRevision myPrevious = new MySCMRevision(current.getHead(), commit1);
+        boolean result = strategy.isAutomaticBuild(source, head, myCurrent, myPrevious, myPrevious, listener);
+        assertThat(
+                baos.toString(Charset.defaultCharset()),
+                containsString("Changeset contains ignored author " + KNOWN_AUTHOR));
+        assertFalse(result);
+    }
+
+    @Test
+    public void testSCMRevisionNotGitRefSCMRevisionAllowBuildsIfExcludedAuthor() {
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), true);
+        MySCMRevision myCurrent = new MySCMRevision(current.getHead(), commit2);
+        MySCMRevision myPrevious = new MySCMRevision(current.getHead(), commit1);
+        boolean result = strategy.isAutomaticBuild(source, head, myCurrent, myPrevious, myPrevious, listener);
+        String msg = "All commits in the changeset are made by excluded authors, build is false";
+        assertThat(baos.toString(Charset.defaultCharset()), containsString(msg));
+        assertFalse(result);
+    }
+
+    @Test
+    public void testSCMRevisionNotGitRefSCMRevisionNoExcludingAuthorTrue() {
+        strategy = new IgnoreCommitterStrategy(getUnknownAuthor(), true);
+        MySCMRevision myCurrent = new MySCMRevision(current.getHead(), commit2);
+        MySCMRevision myPrevious = new MySCMRevision(current.getHead(), commit1);
+        boolean result = strategy.isAutomaticBuild(source, head, myCurrent, myPrevious, myPrevious, listener);
+        String msg = "Changeset contains non ignored author " + KNOWN_AUTHOR;
+        assertThat(baos.toString(Charset.defaultCharset()), containsString(msg));
+        assertTrue(result);
+    }
+
+    @Test
+    public void testSCMRevisionNotGitRefSCMRevisionNoExcludingAuthorFalse() {
+        strategy = new IgnoreCommitterStrategy(getUnknownAuthor(), false);
+        MySCMRevision myCurrent = new MySCMRevision(current.getHead(), commit2);
+        MySCMRevision myPrevious = new MySCMRevision(current.getHead(), commit1);
+        boolean result = strategy.isAutomaticBuild(source, head, myCurrent, myPrevious, myPrevious, listener);
+        String msg = "All commits in the changeset are made by non-excluded authors, build is true";
+        assertThat(baos.toString(Charset.defaultCharset()), containsString(msg));
+        assertTrue(result);
+    }
+
+    @Test
+    public void testSCMRevisionNotGitRefSCMRevisionAndInvalidHash() {
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false);
+        MySCMRevision myCurrent = new MySCMRevision(current.getHead(), "0000" + commit1);
+        boolean result = strategy.isAutomaticBuild(source, head, myCurrent, myCurrent, myCurrent, listener);
+        String msg = "All commits in the changeset are made by non-excluded authors, build is true";
+        assertThat(baos.toString(Charset.defaultCharset()), containsString(msg));
+        assertTrue(result);
+    }
+
+    @Test
+    public void testSCMRevisionNotGitRefSCMRevisionAndTooShort() {
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false);
+        MySCMRevision myCurrent = new MySCMRevision(current.getHead(), "deed"); // Valid SHA1 but too short
+        boolean result = strategy.isAutomaticBuild(source, head, myCurrent, myCurrent, myCurrent, listener);
+        String msg = "ERROR: Exception: java.lang.StringIndexOutOfBoundsException";
+        assertThat(baos.toString(Charset.defaultCharset()), containsString(msg));
+        assertTrue(result);
+    }
+
+    private static class MySCMRevision extends SCMRevision {
+
+        private final String hash;
+
+        public MySCMRevision(SCMHead head, String hash) {
+            super(head);
+            this.hash = hash;
         }
 
-        assertTrue(setupIgnoreCommitterStrategy(commits));
-    }
+        public String getHash() {
+            return hash;
+        }
 
-    private boolean setupIgnoreCommitterStrategy(String commits) throws Exception {
-        // prepare mock GitSCMFileSystem to be returned by builderMock
-        GitSCMFileSystem fileSystemMock = Mockito.mock(GitSCMFileSystem.class);
-        // mock builderMock to build a mocked GitSCMFileSystem
-        GitSCMFileSystem.BuilderImpl builderMock = Mockito.mock(GitSCMFileSystem.BuilderImpl.class);
-        // mock ByteArrayOutputStream to return preset response
-        ByteArrayOutputStream ByteArrayOutputStreamMock = Mockito.mock(ByteArrayOutputStream.class);
-        // mock ownerMock
-        SCMSourceOwner ownerMock = PowerMockito.mock(WorkflowMultiBranchProject.class);
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
 
-        try {
-            PowerMockito.when(source.build(head, currRevision)).thenReturn(scm);
-            PowerMockito.when(source.getOwner()).thenReturn(ownerMock);
+            MySCMRevision that = (MySCMRevision) o;
 
-            // set returns for mocked methods
-            Mockito.when(ByteArrayOutputStreamMock.toByteArray()).thenReturn(commits.getBytes());
-            Mockito.when(builderMock.build(source.getOwner(), scm, currRevision)).thenReturn(fileSystemMock);
-            Mockito.when(fileSystemMock.changesSince(prevRevision, ByteArrayOutputStreamMock)).thenReturn(true);
+            return Objects.equals(hash, that.hash) && Objects.equals(getHead(), that.getHead());
+        }
 
-            // mock classes in the tested target class to return mocked  objects when initiated
-            PowerMockito.whenNew(ByteArrayOutputStream.class).withNoArguments().thenReturn(ByteArrayOutputStreamMock);
-            PowerMockito.whenNew(GitSCMFileSystem.BuilderImpl.class).withNoArguments().thenReturn(builderMock);
+        @Override
+        public int hashCode() {
+            return Objects.hash(hash, getHead());
+        }
 
-            IgnoreCommitterStrategy IgnoreCommitterStrategy = new IgnoreCommitterStrategy(
-                    String.join(",", ignoredAuthors), false
-            );
-
-            return IgnoreCommitterStrategy.isAutomaticBuild(source, head, currRevision, prevRevision);
-        } catch (Exception e) {
-            throw e;
+        @Override
+        public String toString() {
+            return hash;
         }
     }
 
-    private String getCommit(String authorEmail) {
-        List<String> lines = new ArrayList<String>();
-        lines.add(String.format("commit %s", "1567861636cd854f4dd6fa40bf94c0c657681dd5"));
-        lines.add(String.format("author John Galt<%s> 1363879004 +0100", authorEmail));
-        lines.add("");
-        lines.add("    [task] Updated version.");
-        lines.add("    ");
-        lines.add("    Including earlier updates.");
-        lines.add("    ");
-        lines.add("    Changes in this version:");
-        lines.add("    - Changed to take the gerrit url from gerrit query command.");
-        lines.add("    - Aligned reason information with our new commit hooks");
-        lines.add("    ");
-        lines.add("    Change-Id: Ife96d2abed5b066d9620034bec5f04cf74b8c66d");
-        lines.add("    Reviewed-on: https://gerrit.e.se/12345");
-        lines.add("    Tested-by: Jenkins <jenkins@no-mail.com>");
-        lines.add("    Reviewed-by: Mister Another <mister.another@ericsson.com>");
+    private abstract static class FakeSCMSourceOwner implements SCMSourceOwner {}
 
-
-        return String.join("\n", lines);
+    // Incorrect value test case - null owner
+    @Test
+    public void testNullOwner() {
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false);
+        source.setOwner(null);
+        boolean result = strategy.isAutomaticBuild(source, head, current, previous, lastSeen, listener);
+        assertThat(baos.toString(Charset.defaultCharset()), startsWith("ERROR: Error retrieving SCMSourceOwner"));
+        assertTrue(result);
     }
 
-    private String getBrokenCommit(String authorEmail) {
-        List<String> lines = new ArrayList<String>();
-        lines.add(String.format("commit %s", "1567861636cd854f4dd6fa40bf94c0c657681dd5"));
-        lines.add(String.format("Authorzzz John Galt<%s> 1363879004 +0100", authorEmail));
-        lines.add("");
-        lines.add("    [task] Updated version.");
-        lines.add("    ");
-        lines.add("    Including earlier updates.");
-        lines.add("    ");
-        lines.add("    Changes in this version:");
-        lines.add("    - Changed to take the gerrit url from gerrit query command.");
-        lines.add("    - Aligned reason information with our new commit hooks");
-        lines.add("    ");
-        lines.add("    Change-Id: Ife96d2abed5b066d9620034bec5f04cf74b8c66d");
-        lines.add("    Reviewed-on: https://gerrit.e.se/12345");
-        lines.add("    Tested-by: Jenkins <jenkins@no-mail.com>");
-        lines.add("    Reviewed-by: Mister Another <mister.another@ericsson.com>");
-
-
-        return String.join("\n", lines);
+    // Unsupported SCMSource test case, cannot retreive SCMFileSystem
+    @Test
+    public void testUnsupportedSCMSource() {
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false);
+        SubversionSCM scm = new SubversionSCM("http://svn.apache.org/repos/asf/xml/trunk");
+        SCMSource unsupportedSource = new SingleSCMSource("Subversion", scm);
+        unsupportedSource.setOwner(source.getOwner());
+        boolean result = strategy.isAutomaticBuild(unsupportedSource, head, current, previous, lastSeen, listener);
+        assertThat(baos.toString(Charset.defaultCharset()), startsWith("ERROR: Error retrieving SCMFileSystem"));
+        assertTrue(result);
     }
 }
