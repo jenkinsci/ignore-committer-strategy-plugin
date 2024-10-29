@@ -16,7 +16,7 @@ Before submitting a pull request, confirm the formatting is correct with:
 
 ## Code Coverage
 
-[JaCoCo code coverage](https://www.jacoco.org/jacoco/) reporting is available as a maven target and can be displayed by the [Jenkins warnings next generation plugin](https://plugins.jenkins.io/warnings-ng/).
+[JaCoCo code coverage](https://www.jacoco.org/jacoco/) reporting is available as a maven target and can be displayed by the [Jenkins warnings plugin](https://plugins.jenkins.io/warnings-ng/).
 Please try to improve code coverage with tests when you submit a pull request.
 
 * `mvn -P enable-jacoco clean install jacoco:report` to report code coverage with JaCoCo.
