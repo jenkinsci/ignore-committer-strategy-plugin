@@ -35,7 +35,7 @@
 
   <groupId>au.com.versent.jenkins.plugins</groupId>
   <artifactId>ignore-committer-strategy</artifactId>
-  <version>${revision}${changelist}</version>
+  <version>${changelist}</version>
   <packaging>hpi</packaging>
   <name>Ignore Committer Strategy</name>
   <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
@@ -60,8 +60,7 @@
   </scm>
 
   <properties>
-    <revision>1.0.5</revision>
-    <changelist>-SNAPSHOT</changelist>
+    <changelist>999999-SNAPSHOT</changelist>
     <gitHubRepo>jenkinsci/ignore-committer-strategy-plugin</gitHubRepo>
     <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
     <jenkins.baseline>2.452</jenkins.baseline>
