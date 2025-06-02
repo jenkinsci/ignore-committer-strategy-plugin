@@ -28,35 +28,32 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 import org.junit.jupiter.api.Test;
 
-public class IgnoreCommitterStrategySimpleTest {
+class IgnoreCommitterStrategySimpleTest {
 
-    private IgnoreCommitterStrategy strategy;
     private String ignoredAuthors = "";
     private boolean allowBuildIfNotExcludedAuthor = false;
-
-    public IgnoreCommitterStrategySimpleTest() {
-        strategy = new IgnoreCommitterStrategy(ignoredAuthors, allowBuildIfNotExcludedAuthor);
-    }
+    private IgnoreCommitterStrategy strategy =
+            new IgnoreCommitterStrategy(ignoredAuthors, allowBuildIfNotExcludedAuthor);
 
     @Test
-    public void testGetIgnoredAuthors() {
+    void testGetIgnoredAuthors() {
         assertThat(strategy.getIgnoredAuthors(), is(ignoredAuthors));
     }
 
     @Test
-    public void testGetAllowBuildIfNotExcludedAuthor() {
+    void testGetAllowBuildIfNotExcludedAuthor() {
         assertThat(strategy.getAllowBuildIfNotExcludedAuthor(), is(allowBuildIfNotExcludedAuthor));
     }
 
     @Test
-    public void testGetIgnoredAuthorsNonEmpty() {
+    void testGetIgnoredAuthorsNonEmpty() {
         ignoredAuthors = "ignored@example.com";
         strategy = new IgnoreCommitterStrategy(ignoredAuthors, allowBuildIfNotExcludedAuthor);
         assertThat(strategy.getIgnoredAuthors(), is(ignoredAuthors));
     }
 
     @Test
-    public void testGetAllowBuildIfNotExcludedAuthorNegation() {
+    void testGetAllowBuildIfNotExcludedAuthorNegation() {
         allowBuildIfNotExcludedAuthor = !allowBuildIfNotExcludedAuthor;
         strategy = new IgnoreCommitterStrategy(ignoredAuthors, allowBuildIfNotExcludedAuthor);
         assertThat(strategy.getAllowBuildIfNotExcludedAuthor(), is(allowBuildIfNotExcludedAuthor));
