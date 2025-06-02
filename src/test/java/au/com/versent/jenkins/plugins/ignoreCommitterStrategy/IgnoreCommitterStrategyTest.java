@@ -26,8 +26,8 @@ package au.com.versent.jenkins.plugins.ignoreCommitterStrategy;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.startsWith;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import hudson.model.TaskListener;
 import hudson.scm.SubversionSCM;
@@ -40,35 +40,47 @@ import jenkins.plugins.git.GitRefSCMHead;
 import jenkins.plugins.git.GitRefSCMRevision;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
+import jenkins.plugins.git.junit.jupiter.WithGitSampleRepo;
 import jenkins.scm.api.SCMHead;
 import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceOwner;
 import jenkins.scm.impl.SingleSCMSource;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import org.mockito.Mockito;
 
-public class IgnoreCommitterStrategyTest {
+@WithJenkins
+@WithGitSampleRepo
+class IgnoreCommitterStrategyTest {
 
-    @ClassRule
-    public static JenkinsRule r = new JenkinsRule();
+    private static JenkinsRule j;
 
-    @ClassRule
-    public static GitSampleRepoRule sampleRepo = new GitSampleRepoRule();
-
-    private IgnoreCommitterStrategy strategy;
-
-    public IgnoreCommitterStrategyTest() {}
+    private static GitSampleRepoRule sampleRepo;
 
     private static String branchName;
     private static String commit1, commit2;
 
-    @BeforeClass
-    public static void createGitRepository() throws Exception {
+    private static final String KNOWN_AUTHOR = "gits@mplereporule";
+
+    private final Random picker = new Random();
+
+    private IgnoreCommitterStrategy strategy;
+    private SCMSource source;
+    private SCMSourceOwner owner;
+    private GitRefSCMHead head;
+    private SCMRevision current, previous, lastSeen;
+    private TaskListener listener;
+    private ByteArrayOutputStream baos;
+
+    @BeforeAll
+    static void setUp(JenkinsRule rule, GitSampleRepoRule repo) throws Exception {
+        j = rule;
+        sampleRepo = repo;
+
         branchName = "is-automatic-build-test-branch";
         sampleRepo.init();
         commit1 = sampleRepo.head();
@@ -78,15 +90,8 @@ public class IgnoreCommitterStrategyTest {
         commit2 = sampleRepo.head();
     }
 
-    private SCMSource source;
-    private SCMSourceOwner owner;
-    private GitRefSCMHead head;
-    private SCMRevision current, previous, lastSeen;
-    private TaskListener listener;
-    private ByteArrayOutputStream baos;
-
-    @Before
-    public void createSCMSource() {
+    @BeforeEach
+    void setUp() {
         source = new GitSCMSource(sampleRepo.toString());
         owner = Mockito.mock(FakeSCMSourceOwner.class);
         source.setOwner(owner);
@@ -97,9 +102,6 @@ public class IgnoreCommitterStrategyTest {
         baos = new ByteArrayOutputStream();
         listener = new StreamTaskListener(baos, Charset.defaultCharset());
     }
-
-    private final Random picker = new Random();
-    private static final String KNOWN_AUTHOR = "gits@mplereporule";
 
     private String getKnownAuthor() {
         String[] knownAuthors = {
@@ -123,7 +125,7 @@ public class IgnoreCommitterStrategyTest {
     }
 
     @Test
-    public void testIsAutomaticBuildEmptyIgnoredAuthorsTrue() {
+    void testIsAutomaticBuildEmptyIgnoredAuthorsTrue() {
         strategy = new IgnoreCommitterStrategy("", true);
         boolean result = strategy.isAutomaticBuild(source, head, current, previous, lastSeen, listener);
         String msg = "Changeset contains non ignored author " + KNOWN_AUTHOR;
@@ -132,7 +134,7 @@ public class IgnoreCommitterStrategyTest {
     }
 
     @Test
-    public void testIsAutomaticBuildEmptyIgnoredAuthorsFalse() {
+    void testIsAutomaticBuildEmptyIgnoredAuthorsFalse() {
         strategy = new IgnoreCommitterStrategy("", false);
         boolean result = strategy.isAutomaticBuild(source, head, current, previous, lastSeen, listener);
         String msg = "All commits in the changeset are made by non-excluded authors, build is true";
@@ -141,7 +143,7 @@ public class IgnoreCommitterStrategyTest {
     }
 
     @Test
-    public void testIsAutomaticBuildValidIgnoredAuthorTrue() {
+    void testIsAutomaticBuildValidIgnoredAuthorTrue() {
         strategy = new IgnoreCommitterStrategy(getKnownAuthor(), true);
         boolean result = strategy.isAutomaticBuild(source, head, current, previous, lastSeen, listener);
         String msg = "All commits in the changeset are made by excluded authors, build is false";
@@ -150,7 +152,7 @@ public class IgnoreCommitterStrategyTest {
     }
 
     @Test
-    public void testIsAutomaticBuildValidIgnoredAuthorFalse() {
+    void testIsAutomaticBuildValidIgnoredAuthorFalse() {
         strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false);
         boolean result = strategy.isAutomaticBuild(source, head, current, previous, lastSeen, listener);
         String msg = "Changeset contains ignored author " + KNOWN_AUTHOR;
@@ -161,7 +163,7 @@ public class IgnoreCommitterStrategyTest {
     }
 
     @Test
-    public void testIsAutomaticBuildValidIgnoredAuthorNullRevisionTrue() {
+    void testIsAutomaticBuildValidIgnoredAuthorNullRevisionTrue() {
         strategy = new IgnoreCommitterStrategy(getKnownAuthor(), true);
         boolean result = strategy.isAutomaticBuild(source, head, current, previous, null, listener);
         String msg = "All commits in the changeset are made by excluded authors, build is false";
@@ -170,7 +172,7 @@ public class IgnoreCommitterStrategyTest {
     }
 
     @Test
-    public void testIsAutomaticBuildValidIgnoredAuthorNullRevisionFalse() {
+    void testIsAutomaticBuildValidIgnoredAuthorNullRevisionFalse() {
         strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false);
         boolean result = strategy.isAutomaticBuild(source, head, current, previous, null, listener);
         String msg = "Changeset contains ignored author " + KNOWN_AUTHOR;
@@ -181,7 +183,7 @@ public class IgnoreCommitterStrategyTest {
     }
 
     @Test
-    public void testSCMRevisionNotGitRefSCMRevision() {
+    void testSCMRevisionNotGitRefSCMRevision() {
         strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false);
         MySCMRevision myCurrent = new MySCMRevision(current.getHead(), commit2);
         MySCMRevision myPrevious = new MySCMRevision(current.getHead(), commit1);
@@ -193,7 +195,7 @@ public class IgnoreCommitterStrategyTest {
     }
 
     @Test
-    public void testSCMRevisionNotGitRefSCMRevisionAllowBuildsIfExcludedAuthor() {
+    void testSCMRevisionNotGitRefSCMRevisionAllowBuildsIfExcludedAuthor() {
         strategy = new IgnoreCommitterStrategy(getKnownAuthor(), true);
         MySCMRevision myCurrent = new MySCMRevision(current.getHead(), commit2);
         MySCMRevision myPrevious = new MySCMRevision(current.getHead(), commit1);
@@ -204,7 +206,7 @@ public class IgnoreCommitterStrategyTest {
     }
 
     @Test
-    public void testSCMRevisionNotGitRefSCMRevisionNoExcludingAuthorTrue() {
+    void testSCMRevisionNotGitRefSCMRevisionNoExcludingAuthorTrue() {
         strategy = new IgnoreCommitterStrategy(getUnknownAuthor(), true);
         MySCMRevision myCurrent = new MySCMRevision(current.getHead(), commit2);
         MySCMRevision myPrevious = new MySCMRevision(current.getHead(), commit1);
@@ -215,7 +217,7 @@ public class IgnoreCommitterStrategyTest {
     }
 
     @Test
-    public void testSCMRevisionNotGitRefSCMRevisionNoExcludingAuthorFalse() {
+    void testSCMRevisionNotGitRefSCMRevisionNoExcludingAuthorFalse() {
         strategy = new IgnoreCommitterStrategy(getUnknownAuthor(), false);
         MySCMRevision myCurrent = new MySCMRevision(current.getHead(), commit2);
         MySCMRevision myPrevious = new MySCMRevision(current.getHead(), commit1);
@@ -226,7 +228,7 @@ public class IgnoreCommitterStrategyTest {
     }
 
     @Test
-    public void testSCMRevisionNotGitRefSCMRevisionAndInvalidHash() {
+    void testSCMRevisionNotGitRefSCMRevisionAndInvalidHash() {
         strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false);
         MySCMRevision myCurrent = new MySCMRevision(current.getHead(), "0000" + commit1);
         boolean result = strategy.isAutomaticBuild(source, head, myCurrent, myCurrent, myCurrent, listener);
@@ -236,7 +238,7 @@ public class IgnoreCommitterStrategyTest {
     }
 
     @Test
-    public void testSCMRevisionNotGitRefSCMRevisionAndTooShort() {
+    void testSCMRevisionNotGitRefSCMRevisionAndTooShort() {
         strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false);
         MySCMRevision myCurrent = new MySCMRevision(current.getHead(), "deed"); // Valid SHA1 but too short
         boolean result = strategy.isAutomaticBuild(source, head, myCurrent, myCurrent, myCurrent, listener);
@@ -287,7 +289,7 @@ public class IgnoreCommitterStrategyTest {
 
     // Incorrect value test case - null owner
     @Test
-    public void testNullOwner() {
+    void testNullOwner() {
         strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false);
         source.setOwner(null);
         boolean result = strategy.isAutomaticBuild(source, head, current, previous, lastSeen, listener);
@@ -295,9 +297,9 @@ public class IgnoreCommitterStrategyTest {
         assertTrue(result);
     }
 
-    // Unsupported SCMSource test case, cannot retreive SCMFileSystem
+    // Unsupported SCMSource test case, cannot retrieve SCMFileSystem
     @Test
-    public void testUnsupportedSCMSource() {
+    void testUnsupportedSCMSource() {
         strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false);
         SubversionSCM scm = new SubversionSCM("http://svn.apache.org/repos/asf/xml/trunk");
         SCMSource unsupportedSource = new SingleSCMSource("Subversion", scm);
