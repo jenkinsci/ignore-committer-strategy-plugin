@@ -6,4 +6,7 @@
   <f:entry title="Allow builds when a changeset contains non-ignored author(s)" field="allowBuildIfNotExcludedAuthor">
     <f:checkbox/>
   </f:entry>
+  <f:entry title="Check only HEAD (latest commit)" field="checkOnlyHead">
+    <f:checkbox/>
+  </f:entry>
 </j:jelly>

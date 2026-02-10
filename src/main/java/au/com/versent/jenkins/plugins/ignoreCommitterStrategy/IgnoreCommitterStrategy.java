@@ -45,11 +45,14 @@ import org.kohsuke.stapler.DataBoundConstructor;
 public class IgnoreCommitterStrategy extends BranchBuildStrategy {
     private final String ignoredAuthors;
     private final Boolean allowBuildIfNotExcludedAuthor;
+    private final Boolean checkOnlyHead;
 
     @DataBoundConstructor
-    public IgnoreCommitterStrategy(String ignoredAuthors, Boolean allowBuildIfNotExcludedAuthor) {
+    public IgnoreCommitterStrategy(
+            String ignoredAuthors, Boolean allowBuildIfNotExcludedAuthor, Boolean checkOnlyHead) {
         this.ignoredAuthors = ignoredAuthors;
         this.allowBuildIfNotExcludedAuthor = allowBuildIfNotExcludedAuthor;
+        this.checkOnlyHead = checkOnlyHead;
     }
 
     /**
@@ -67,6 +70,14 @@ public class IgnoreCommitterStrategy extends BranchBuildStrategy {
      */
     public Boolean getAllowBuildIfNotExcludedAuthor() {
         return allowBuildIfNotExcludedAuthor;
+    }
+
+    /**
+     * Determine if only the HEAD (latest) commit should be checked
+     * @return indicates if only the HEAD commit should be checked instead of all commits in the changeset
+     */
+    public Boolean getCheckOnlyHead() {
+        return checkOnlyHead;
     }
 
     /**
@@ -132,6 +143,15 @@ public class IgnoreCommitterStrategy extends BranchBuildStrategy {
 
             listener.getLogger().printf("Ignored authors: %s%n", ignoredAuthorsList.toString());
 
+            // If checkOnlyHead is enabled, only check the HEAD commit (latest commit)
+            if (Boolean.TRUE.equals(checkOnlyHead) && !logs.isEmpty()) {
+                listener.getLogger().printf("Check only HEAD is enabled, examining only the latest commit%n");
+                // Get the latest commit (HEAD) - first commit in the list since logs are in reverse chronological order
+                GitChangeSet headCommit = logs.get(0);
+                return shouldBuildForCommit(headCommit, ignoredAuthorsList, listener);
+            }
+
+            // Original logic: check all commits in the changeset
             for (GitChangeSet log : logs) {
                 String authorEmail = log.getAuthorEmail().trim().toLowerCase();
                 Boolean isIgnoredAuthor = ignoredAuthorsList.contains(authorEmail);
@@ -170,6 +190,51 @@ public class IgnoreCommitterStrategy extends BranchBuildStrategy {
             return !allowBuildIfNotExcludedAuthor;
         } catch (Exception e) {
             listener.error("Exception: %s%n", e);
+            return true;
+        }
+    }
+
+    /**
+     * Determines whether a build should be triggered based on a single commit
+     *
+     * @param commit the Git commit to check
+     * @param ignoredAuthorsList list of ignored author emails (lowercase)
+     * @param listener task listener for logging
+     * @return true if build should be triggered, false otherwise
+     */
+    private boolean shouldBuildForCommit(GitChangeSet commit, List<String> ignoredAuthorsList, TaskListener listener) {
+        String authorEmail = commit.getAuthorEmail().trim().toLowerCase();
+        Boolean isIgnoredAuthor = ignoredAuthorsList.contains(authorEmail);
+
+        if (isIgnoredAuthor) {
+            if (!allowBuildIfNotExcludedAuthor) {
+                // if author is ignored and changesets with at least one non-excluded author are not allowed
+                listener.getLogger()
+                        .printf(
+                                "Commit contains ignored author %s (%s), and allowBuildIfNotExcludedAuthor is %s, therefore build is not required%n",
+                                authorEmail, commit.getCommitId(), allowBuildIfNotExcludedAuthor);
+                return false;
+            }
+            // If allowBuildIfNotExcludedAuthor is true and the author is ignored,
+            // we would normally continue checking other commits, but with checkOnlyHead
+            // this is the only commit to check, so return false
+            listener.getLogger()
+                    .printf("HEAD commit is made by excluded author %s, build is not required%n", authorEmail);
+            return false;
+        } else {
+            if (allowBuildIfNotExcludedAuthor) {
+                // if author is not ignored and changesets with at least one non-excluded author are allowed
+                listener.getLogger()
+                        .printf(
+                                "Commit contains non ignored author %s (%s) and allowIfNotExcluded is %s, build is required%n",
+                                authorEmail, commit.getCommitId(), allowBuildIfNotExcludedAuthor);
+                return true;
+            }
+            // If allowBuildIfNotExcludedAuthor is false and the author is not ignored,
+            // we would normally continue checking other commits, but with checkOnlyHead
+            // this is the only commit to check, so return true (build should be triggered)
+            listener.getLogger()
+                    .printf("HEAD commit is made by non-excluded author %s, build is required%n", authorEmail);
             return true;
         }
     }

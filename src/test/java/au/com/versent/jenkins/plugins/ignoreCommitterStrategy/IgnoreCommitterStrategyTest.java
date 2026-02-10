@@ -126,7 +126,7 @@ class IgnoreCommitterStrategyTest {
 
     @Test
     void testIsAutomaticBuildEmptyIgnoredAuthorsTrue() {
-        strategy = new IgnoreCommitterStrategy("", true);
+        strategy = new IgnoreCommitterStrategy("", true, false);
         boolean result = strategy.isAutomaticBuild(source, head, current, previous, lastSeen, listener);
         String msg = "Changeset contains non ignored author " + KNOWN_AUTHOR;
         assertThat(baos.toString(Charset.defaultCharset()), containsString(msg));
@@ -135,7 +135,7 @@ class IgnoreCommitterStrategyTest {
 
     @Test
     void testIsAutomaticBuildEmptyIgnoredAuthorsFalse() {
-        strategy = new IgnoreCommitterStrategy("", false);
+        strategy = new IgnoreCommitterStrategy("", false, false);
         boolean result = strategy.isAutomaticBuild(source, head, current, previous, lastSeen, listener);
         String msg = "All commits in the changeset are made by non-excluded authors, build is true";
         assertThat(baos.toString(Charset.defaultCharset()), containsString(msg));
@@ -144,7 +144,7 @@ class IgnoreCommitterStrategyTest {
 
     @Test
     void testIsAutomaticBuildValidIgnoredAuthorTrue() {
-        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), true);
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), true, false);
         boolean result = strategy.isAutomaticBuild(source, head, current, previous, lastSeen, listener);
         String msg = "All commits in the changeset are made by excluded authors, build is false";
         assertThat(baos.toString(Charset.defaultCharset()), containsString(msg));
@@ -153,7 +153,7 @@ class IgnoreCommitterStrategyTest {
 
     @Test
     void testIsAutomaticBuildValidIgnoredAuthorFalse() {
-        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false);
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false, false);
         boolean result = strategy.isAutomaticBuild(source, head, current, previous, lastSeen, listener);
         String msg = "Changeset contains ignored author " + KNOWN_AUTHOR;
         assertThat(baos.toString(Charset.defaultCharset()), containsString(msg));
@@ -164,7 +164,7 @@ class IgnoreCommitterStrategyTest {
 
     @Test
     void testIsAutomaticBuildValidIgnoredAuthorNullRevisionTrue() {
-        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), true);
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), true, false);
         boolean result = strategy.isAutomaticBuild(source, head, current, previous, null, listener);
         String msg = "All commits in the changeset are made by excluded authors, build is false";
         assertThat(baos.toString(Charset.defaultCharset()), containsString(msg));
@@ -173,7 +173,7 @@ class IgnoreCommitterStrategyTest {
 
     @Test
     void testIsAutomaticBuildValidIgnoredAuthorNullRevisionFalse() {
-        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false);
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false, false);
         boolean result = strategy.isAutomaticBuild(source, head, current, previous, null, listener);
         String msg = "Changeset contains ignored author " + KNOWN_AUTHOR;
         assertThat(baos.toString(Charset.defaultCharset()), containsString(msg));
@@ -184,7 +184,7 @@ class IgnoreCommitterStrategyTest {
 
     @Test
     void testSCMRevisionNotGitRefSCMRevision() {
-        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false);
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false, false);
         MySCMRevision myCurrent = new MySCMRevision(current.getHead(), commit2);
         MySCMRevision myPrevious = new MySCMRevision(current.getHead(), commit1);
         boolean result = strategy.isAutomaticBuild(source, head, myCurrent, myPrevious, myPrevious, listener);
@@ -196,7 +196,7 @@ class IgnoreCommitterStrategyTest {
 
     @Test
     void testSCMRevisionNotGitRefSCMRevisionAllowBuildsIfExcludedAuthor() {
-        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), true);
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), true, false);
         MySCMRevision myCurrent = new MySCMRevision(current.getHead(), commit2);
         MySCMRevision myPrevious = new MySCMRevision(current.getHead(), commit1);
         boolean result = strategy.isAutomaticBuild(source, head, myCurrent, myPrevious, myPrevious, listener);
@@ -207,7 +207,7 @@ class IgnoreCommitterStrategyTest {
 
     @Test
     void testSCMRevisionNotGitRefSCMRevisionNoExcludingAuthorTrue() {
-        strategy = new IgnoreCommitterStrategy(getUnknownAuthor(), true);
+        strategy = new IgnoreCommitterStrategy(getUnknownAuthor(), true, false);
         MySCMRevision myCurrent = new MySCMRevision(current.getHead(), commit2);
         MySCMRevision myPrevious = new MySCMRevision(current.getHead(), commit1);
         boolean result = strategy.isAutomaticBuild(source, head, myCurrent, myPrevious, myPrevious, listener);
@@ -218,7 +218,7 @@ class IgnoreCommitterStrategyTest {
 
     @Test
     void testSCMRevisionNotGitRefSCMRevisionNoExcludingAuthorFalse() {
-        strategy = new IgnoreCommitterStrategy(getUnknownAuthor(), false);
+        strategy = new IgnoreCommitterStrategy(getUnknownAuthor(), false, false);
         MySCMRevision myCurrent = new MySCMRevision(current.getHead(), commit2);
         MySCMRevision myPrevious = new MySCMRevision(current.getHead(), commit1);
         boolean result = strategy.isAutomaticBuild(source, head, myCurrent, myPrevious, myPrevious, listener);
@@ -229,7 +229,7 @@ class IgnoreCommitterStrategyTest {
 
     @Test
     void testSCMRevisionNotGitRefSCMRevisionAndInvalidHash() {
-        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false);
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false, false);
         MySCMRevision myCurrent = new MySCMRevision(current.getHead(), "0000" + commit1);
         boolean result = strategy.isAutomaticBuild(source, head, myCurrent, myCurrent, myCurrent, listener);
         String msg = "All commits in the changeset are made by non-excluded authors, build is true";
@@ -239,7 +239,7 @@ class IgnoreCommitterStrategyTest {
 
     @Test
     void testSCMRevisionNotGitRefSCMRevisionAndTooShort() {
-        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false);
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false, false);
         MySCMRevision myCurrent = new MySCMRevision(current.getHead(), "deed"); // Valid SHA1 but too short
         boolean result = strategy.isAutomaticBuild(source, head, myCurrent, myCurrent, myCurrent, listener);
         String msg = "ERROR: Exception: java.lang.StringIndexOutOfBoundsException";
@@ -290,7 +290,7 @@ class IgnoreCommitterStrategyTest {
     // Incorrect value test case - null owner
     @Test
     void testNullOwner() {
-        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false);
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false, false);
         source.setOwner(null);
         boolean result = strategy.isAutomaticBuild(source, head, current, previous, lastSeen, listener);
         assertThat(baos.toString(Charset.defaultCharset()), startsWith("ERROR: Error retrieving SCMSourceOwner"));
@@ -300,12 +300,65 @@ class IgnoreCommitterStrategyTest {
     // Unsupported SCMSource test case, cannot retrieve SCMFileSystem
     @Test
     void testUnsupportedSCMSource() {
-        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false);
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false, false);
         SubversionSCM scm = new SubversionSCM("http://svn.apache.org/repos/asf/xml/trunk");
         SCMSource unsupportedSource = new SingleSCMSource("Subversion", scm);
         unsupportedSource.setOwner(source.getOwner());
         boolean result = strategy.isAutomaticBuild(unsupportedSource, head, current, previous, lastSeen, listener);
         assertThat(baos.toString(Charset.defaultCharset()), startsWith("ERROR: Error retrieving SCMFileSystem"));
+        assertTrue(result);
+    }
+
+    // Tests for checkOnlyHead functionality
+    @Test
+    void testCheckOnlyHeadWithIgnoredAuthorFalse() {
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false, true);
+        boolean result = strategy.isAutomaticBuild(source, head, current, previous, lastSeen, listener);
+        assertThat(baos.toString(Charset.defaultCharset()), containsString("Check only HEAD is enabled"));
+        assertThat(
+                baos.toString(Charset.defaultCharset()),
+                containsString("Commit contains ignored author " + KNOWN_AUTHOR));
+        assertFalse(result);
+    }
+
+    @Test
+    void testCheckOnlyHeadWithIgnoredAuthorTrue() {
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), true, true);
+        boolean result = strategy.isAutomaticBuild(source, head, current, previous, lastSeen, listener);
+        assertThat(baos.toString(Charset.defaultCharset()), containsString("Check only HEAD is enabled"));
+        // With checkOnlyHead=true and allowBuildIfNotExcludedAuthor=true, if HEAD author is ignored, build should not
+        // be triggered
+        assertFalse(result);
+    }
+
+    @Test
+    void testCheckOnlyHeadWithNonIgnoredAuthorTrue() {
+        strategy = new IgnoreCommitterStrategy(getUnknownAuthor(), true, true);
+        boolean result = strategy.isAutomaticBuild(source, head, current, previous, lastSeen, listener);
+        assertThat(baos.toString(Charset.defaultCharset()), containsString("Check only HEAD is enabled"));
+        assertThat(
+                baos.toString(Charset.defaultCharset()),
+                containsString("Commit contains non ignored author " + KNOWN_AUTHOR));
+        assertTrue(result);
+    }
+
+    @Test
+    void testCheckOnlyHeadWithNonIgnoredAuthorFalse() {
+        strategy = new IgnoreCommitterStrategy(getUnknownAuthor(), false, true);
+        boolean result = strategy.isAutomaticBuild(source, head, current, previous, lastSeen, listener);
+        assertThat(baos.toString(Charset.defaultCharset()), containsString("Check only HEAD is enabled"));
+        // With checkOnlyHead=true and allowBuildIfNotExcludedAuthor=false, if HEAD author is not ignored, build should
+        // be triggered
+        assertTrue(result);
+    }
+
+    @Test
+    void testCheckOnlyHeadWithEmptyLogs() {
+        strategy = new IgnoreCommitterStrategy(getKnownAuthor(), false, true);
+        // Test case where checkOnlyHead=true but no commits exist between current and lastSeen (empty logs)
+        // This covers the branch where Boolean.TRUE.equals(checkOnlyHead) && !logs.isEmpty() evaluates to false
+        boolean result = strategy.isAutomaticBuild(source, head, current, current, current, listener);
+        // With empty logs, should fall through to original logic and return true (default behavior)
         assertTrue(result);
     }
 }
