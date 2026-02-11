@@ -32,8 +32,9 @@ class IgnoreCommitterStrategySimpleTest {
 
     private String ignoredAuthors = "";
     private boolean allowBuildIfNotExcludedAuthor = false;
+    private boolean checkOnlyHead = false;
     private IgnoreCommitterStrategy strategy =
-            new IgnoreCommitterStrategy(ignoredAuthors, allowBuildIfNotExcludedAuthor);
+            new IgnoreCommitterStrategy(ignoredAuthors, allowBuildIfNotExcludedAuthor, checkOnlyHead);
 
     @Test
     void testGetIgnoredAuthors() {
@@ -46,16 +47,28 @@ class IgnoreCommitterStrategySimpleTest {
     }
 
     @Test
+    void testGetCheckOnlyHead() {
+        assertThat(strategy.getCheckOnlyHead(), is(checkOnlyHead));
+    }
+
+    @Test
     void testGetIgnoredAuthorsNonEmpty() {
         ignoredAuthors = "ignored@example.com";
-        strategy = new IgnoreCommitterStrategy(ignoredAuthors, allowBuildIfNotExcludedAuthor);
+        strategy = new IgnoreCommitterStrategy(ignoredAuthors, allowBuildIfNotExcludedAuthor, false);
         assertThat(strategy.getIgnoredAuthors(), is(ignoredAuthors));
     }
 
     @Test
     void testGetAllowBuildIfNotExcludedAuthorNegation() {
         allowBuildIfNotExcludedAuthor = !allowBuildIfNotExcludedAuthor;
-        strategy = new IgnoreCommitterStrategy(ignoredAuthors, allowBuildIfNotExcludedAuthor);
+        strategy = new IgnoreCommitterStrategy(ignoredAuthors, allowBuildIfNotExcludedAuthor, false);
         assertThat(strategy.getAllowBuildIfNotExcludedAuthor(), is(allowBuildIfNotExcludedAuthor));
+    }
+
+    @Test
+    void testGetCheckOnlyHeadTrue() {
+        checkOnlyHead = true;
+        strategy = new IgnoreCommitterStrategy(ignoredAuthors, allowBuildIfNotExcludedAuthor, checkOnlyHead);
+        assertThat(strategy.getCheckOnlyHead(), is(checkOnlyHead));
     }
 }

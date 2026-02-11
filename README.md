@@ -12,4 +12,6 @@ and under `Branch Sources` use the *Add* button below `Build Strategies` to add 
 By default, builds are not triggered if at least one of the authors in the changeset is specified in the ignore list.
 If the `Allow builds when a changeset contains non-ignored author(s)` box is checked, a new build will be triggered if the changeset contains any author that is **not** in the exclusion list.
 
+If the `Check only HEAD (latest commit)` box is checked, only the HEAD (latest commit) will be checked against the ignored authors list instead of all commits in the changeset.
+
 ![Configuring build strategy](./plugin-config.png?raw=true "Configuring build strategy")
